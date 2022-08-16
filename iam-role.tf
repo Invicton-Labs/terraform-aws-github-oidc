@@ -1,58 +1,86 @@
+locals {
+  assume_actions = [
+    "sts:AssumeRoleWithWebIdentity"
+  ]
+  federation_identifiers = [
+    local.oidc_provider.arn
+  ]
+  audiences = [
+    var.audience
+  ]
+  role_refs = [
+    for role_config in var.repository_roles :
+    [
+      for ref in concat(
+        [
+          for branch in(role_config.branches != null ? role_config.branches : []) :
+          "ref:refs/heads/${branch}"
+        ],
+        [
+          for tag in(role_config.tags != null ? role_config.tags : []) :
+          "ref:refs/tags/${tag}"
+        ],
+        [
+          for env in(role_config.environments != null ? role_config.environments : []) :
+          "environment:${env}"
+        ],
+        role_config.pull_requests ? ["pull_request"] : []
+      ) :
+      "repo:*:${ref}"
+    ]
+  ]
+}
+
 data "aws_iam_policy_document" "trust" {
   count = length(var.repository_roles)
 
+  // Include any additional trust policy documents
+  source_policy_documents = var.repository_roles[count.index].additional_role_trust_policy_documents != null ? var.repository_roles[count.index].additional_role_trust_policy_documents : []
+
+  // Allow the role assumption if basic criteria are met
   statement {
-    actions = [
-      "sts:AssumeRole"
-    ]
+    effect  = "Allow"
+    actions = local.assume_actions
     principals {
-      type = "Federated"
-      identifiers = [
-        "token.actions.githubusercontent.com"
-      ]
+      type        = "Federated"
+      identifiers = local.federation_identifiers
     }
 
     // Ensure that it has the intended audience
     condition {
-      variable = "token.actions.githubusercontent.com:aud"
+      variable = "${local.oidc_host}:aud"
       test     = "StringEquals"
-      values = [
-        "sts.amazonaws.com"
-      ]
+      values   = local.audiences
     }
 
     // Ensure that the request came from an accepted repository
     condition {
-      variable = "token.actions.githubusercontent.com:sub"
+      variable = "${local.oidc_host}:sub"
       test     = "StringLike"
       values = [
         for repo in var.repository_roles[count.index].repositories :
         "repo:${repo}:*"
       ]
     }
+  }
 
-    // Ensure that the ref is allowed
-    condition {
-      variable = "token.actions.githubusercontent.com:sub"
-      test     = "StringLike"
-      values = [
-        for ref in concat(
-          [
-            for branch in(var.repository_roles[count.index].branches != null ? var.repository_roles[count.index].branches : []) :
-            "ref:refs/heads/${branch}"
-          ],
-          [
-            for tag in(var.repository_roles[count.index].tags != null ? var.repository_roles[count.index].tags : []) :
-            "ref:refs/tags/${tag}"
-          ],
-          [
-            for env in(var.repository_roles[count.index].environments != null ? var.repository_roles[count.index].environments : []) :
-            "environment:${env}"
-          ],
-          var.repository_roles[count.index].pull_requests ? ["pull_request"] : []
-        ) :
-        "repo:*/*:${ref}"
-      ]
+  statement {
+    effect  = "Deny"
+    actions = local.assume_actions
+    principals {
+      type        = "Federated"
+      identifiers = local.federation_identifiers
+    }
+    // If there are no refs specified, always deny.
+    // If refs are specified, deny if the sub doesn't
+    // match at least one of them.
+    dynamic "condition" {
+      for_each = length(local.role_refs[count.index]) > 0 ? [local.role_refs[count.index]] : []
+      content {
+        variable = "${local.oidc_host}:sub"
+        test     = "StringNotLike"
+        values   = condition.value
+      }
     }
   }
 }

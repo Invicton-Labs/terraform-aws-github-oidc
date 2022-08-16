@@ -17,6 +17,8 @@ variable "repository_roles" {
   `iam_policy_documents`: A list of objects, each with a policy name and a JSON-encoded IAM policy document, that should be used to create IAM policies, which will then be attached to the role.
 
   `iam_inline_policy_documents`: A list of objects, each with a policy name and a JSON-encoded IAM policy document, that will be inline-attached to the role.
+
+  `additional_role_trust_policy_documents`: A list of additional JSON-encoded IAM trust policy documents to include in the trust policy for the role. This is useful if you want the role to be assumable by additional entities other than GitHub Actions.
 EOF
   type = list(object({
     role_name       = string
@@ -34,18 +36,23 @@ EOF
       policy_name     = string
       policy_document = string
     }))
+    additional_role_trust_policy_documents = list(string)
   }))
   default  = []
   nullable = false
 }
 
-variable "existing_provider" {
-  description = "An existing IAM GitHub Actions OIDC provider, returned as the `aws_iam_openid_connect_provider` output of a different instance of this module. If provided, it will be used instead of creating a new one."
-  type = object({
-    arn                           = string
-    __INVICTON_LABS_OIDC_PROVIDER = bool
-  })
-  default = null
+variable "audience" {
+  description = "The audience value that will be used in the OIDC requests from GitHub Actions. Leave as the default if you're using the official AWS authentication action."
+  type        = string
+  default     = "sts.amazonaws.com"
+  nullable    = false
+}
+
+variable "iam_oidc_provider_arn" {
+  description = "The ARN of an existing IAM GitHub Actions OIDC provider. If provided, it will be used instead of creating a new one."
+  type        = string
+  default     = null
 }
 
 variable "add_unique_suffix_to_role_names" {
