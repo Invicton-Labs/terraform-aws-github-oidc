@@ -1,27 +1,29 @@
-# Sample workflow to access AWS resources when workflow is tied to branch
-# The workflow Creates static website using aws s3
-name: AWS example workflow
+name: AWS Credentials Example
+
 on:
   push
+
 env:
   AWS_REGION : "ca-central-1"
-# permission can be added at job level or workflow level    
-#permissions:
-      #id-token: write
+
+# This permission must be set because, by default, the GitHub token created
+# for the workflow doesn't have permission to get an ID token.   
+permissions:
+  id-token: write
+
 jobs:
   CredsTest:
     runs-on: ubuntu-latest
     steps:
-      - name: Git clone the repository
+      - name: Clone the repository
         uses: actions/checkout@v3
 
-      - name: configure aws credentials
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           role-to-assume: arn:aws:iam::392050343382:role/test-role
           role-session-name: samplerolesession
           aws-region: ${{ env.AWS_REGION }}
           
-      - name:  Get caller identity
-        run: |
-          aws sts get-caller-identity
+      - name: Get the caller identity
+        run: aws sts get-caller-identity
