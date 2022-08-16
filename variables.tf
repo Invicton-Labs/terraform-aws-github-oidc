@@ -18,6 +18,8 @@ variable "repository_roles" {
 
   `iam_inline_policy_documents`: A list of objects, each with a policy name and a JSON-encoded IAM policy document, that will be inline-attached to the role.
 
+  `max_session_duration`: Maximum session duration (in seconds) that you want to set for the specified role. If you do not specify a value for this setting, the default maximum of one hour is applied. This setting can have a value from 1 hour to 12 hours.
+
   `additional_role_trust_policy_documents`: A list of additional JSON-encoded IAM trust policy documents to include in the trust policy for the role. This is useful if you want the role to be assumable by additional entities other than GitHub Actions.
 EOF
   type = list(object({
@@ -36,6 +38,7 @@ EOF
       policy_name     = string
       policy_document = string
     }))
+    max_session_duration                   = number
     additional_role_trust_policy_documents = list(string)
   }))
   default  = []

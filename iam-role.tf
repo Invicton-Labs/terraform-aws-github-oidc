@@ -86,8 +86,9 @@ data "aws_iam_policy_document" "trust" {
 }
 
 resource "aws_iam_role" "this" {
-  count              = length(var.repository_roles)
-  name               = var.add_unique_suffix_to_role_names ? null : var.repository_roles[count.index].role_name
-  name_prefix        = var.add_unique_suffix_to_role_names ? "${var.repository_roles[count.index].role_name}-" : null
-  assume_role_policy = data.aws_iam_policy_document.trust[count.index].json
+  count                = length(var.repository_roles)
+  name                 = var.add_unique_suffix_to_role_names ? null : var.repository_roles[count.index].role_name
+  name_prefix          = var.add_unique_suffix_to_role_names ? "${var.repository_roles[count.index].role_name}-" : null
+  assume_role_policy   = data.aws_iam_policy_document.trust[count.index].json
+  max_session_duration = var.repository_roles[count.index].max_session_duration
 }
