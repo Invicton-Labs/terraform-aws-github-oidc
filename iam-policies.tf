@@ -2,7 +2,7 @@ locals {
   existing_policy_attachments = concat([
     for rr_idx, rr in var.repository_roles :
     [
-      for arn in rr.iam_policy_arns :
+      for arn in rr.iam_policy_arns != null ? rr.iam_policy_arns : [] :
       {
         rr_idx     = rr_idx
         policy_arn = arn
