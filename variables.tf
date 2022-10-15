@@ -25,37 +25,24 @@ EOF
   type = list(object({
     role_name       = string
     repositories    = list(string)
-    branches        = list(string)
-    tags            = list(string)
-    environments    = list(string)
-    pull_requests   = bool
-    iam_policy_arns = list(string)
-    iam_policy_documents = list(object({
+    branches        = optional(list(string), [])
+    tags            = optional(list(string), [])
+    environments    = optional(list(string), [])
+    pull_requests   = optional(bool, false)
+    iam_policy_arns = optional(list(string), [])
+    iam_policy_documents = optional(list(object({
       policy_name     = string
       policy_document = string
-    }))
-    iam_inline_policy_documents = list(object({
+    })), [])
+    iam_inline_policy_documents = optional(list(object({
       policy_name     = string
       policy_document = string
-    }))
-    max_session_duration                   = number
-    additional_role_trust_policy_documents = list(string)
+    })), [])
+    max_session_duration                   = optional(number)
+    additional_role_trust_policy_documents = optional(list(string), [])
   }))
   default  = []
   nullable = false
-}
-
-variable "audience" {
-  description = "The audience value that will be used in the OIDC requests from GitHub Actions. Leave as the default if you're using the official AWS authentication action."
-  type        = string
-  default     = "sts.amazonaws.com"
-  nullable    = false
-}
-
-variable "iam_oidc_provider_arn" {
-  description = "The ARN of an existing IAM GitHub Actions OIDC provider. If provided, it will be used instead of creating a new one."
-  type        = string
-  default     = null
 }
 
 variable "add_unique_suffix_to_role_names" {
@@ -70,4 +57,16 @@ variable "add_unique_suffix_to_policy_names" {
   type        = bool
   default     = false
   nullable    = false
+}
+
+variable "iam_oidc_provider_module" {
+  description = "The Invicton-Labs/github-oidc/aws/provider module that was used to create the IAM OIDC provider. This value should be the entire module itself, not an output of the module."
+  type = object({
+    audience  = string
+    oidc_host = string
+    oidc_provider = object({
+      arn = string
+    })
+  })
+  nullable = false
 }

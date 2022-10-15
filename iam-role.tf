@@ -3,10 +3,10 @@ locals {
     "sts:AssumeRoleWithWebIdentity"
   ]
   federation_identifiers = [
-    local.oidc_provider.arn
+    var.iam_oidc_provider_module.oidc_provider.arn
   ]
   audiences = [
-    var.audience
+    var.iam_oidc_provider_module.audience
   ]
   role_refs = [
     for role_config in var.repository_roles :
@@ -31,11 +31,28 @@ locals {
   ]
 }
 
+data "aws_caller_identity" "current" {}
+
 data "aws_iam_policy_document" "trust" {
   count = length(var.repository_roles)
 
   // Include any additional trust policy documents
   source_policy_documents = var.repository_roles[count.index].additional_role_trust_policy_documents != null ? var.repository_roles[count.index].additional_role_trust_policy_documents : []
+
+  // Always allow the owner account to assume the role (this just allows granting
+  // other users/roles permissions to assume it)
+  statement {
+    effect = "Allow"
+    actions = [
+      "sts:AssumeRole"
+    ]
+    principals {
+      type = "AWS"
+      identifiers = [
+        "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+      ]
+    }
+  }
 
   // Allow the role assumption if basic criteria are met
   statement {
@@ -48,14 +65,14 @@ data "aws_iam_policy_document" "trust" {
 
     // Ensure that it has the intended audience
     condition {
-      variable = "${local.oidc_host}:aud"
+      variable = "${var.iam_oidc_provider_module.oidc_host}:aud"
       test     = "StringEquals"
       values   = local.audiences
     }
 
     // Ensure that the request came from an accepted repository
     condition {
-      variable = "${local.oidc_host}:sub"
+      variable = "${var.iam_oidc_provider_module.oidc_host}:sub"
       test     = "StringLike"
       values = [
         for repo in var.repository_roles[count.index].repositories :
@@ -77,7 +94,7 @@ data "aws_iam_policy_document" "trust" {
     dynamic "condition" {
       for_each = length(local.role_refs[count.index]) > 0 ? [local.role_refs[count.index]] : []
       content {
-        variable = "${local.oidc_host}:sub"
+        variable = "${var.iam_oidc_provider_module.oidc_host}:sub"
         test     = "StringNotLike"
         values   = condition.value
       }

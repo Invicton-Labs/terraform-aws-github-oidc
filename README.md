@@ -7,13 +7,29 @@ We will be adding support for additional input arguments for roles (e.g. `path`,
 
 ## Multiple Instances
 
-An AWS account can only have a single IAM OIDC provider with a given provider URL. Therefore, if you want to use multiple instances of this module within the same AWS account (in different Terraform configs, or within the same Terraform config), you must pass the ARN of the IAM OIDC provider (the `iam_oidc_provider_arn` output variable) that was created in the first instance of this module as the `iam_oidc_provider_arn` input variable of all other instances of this module.
+An AWS account can only have a single IAM OIDC provider with a given provider URL. Therefore, we have split this module into two parts: a submodule for creating the IAM provider (can only be used once per AWS account), and the main module for creating repository access (can be used as many times as you like).
+
 
 ## Usage
+
+### Creating the IAM OIDC provider
+
+```terraform
+module "github_actions_oidc_provider" {
+  source = "Invicton-Labs/github-oidc/aws/provider"
+}
+```
+
+### Managing repository access
 
 ```terraform
 module "github_actions_oidc_website" {
   source = "Invicton-Labs/github-oidc/aws"
+
+  // Pass the module for the provider in its entirety
+  iam_oidc_provider_module = module.github_actions_oidc_provider
+
+  // Specify the repository roles
   repository_roles = [
     // For the dev branch
     {
@@ -66,44 +82,10 @@ module "github_actions_oidc_website" {
 }
 ```
 
-And if you wanted to use this same module somewhere else in your configuration:
-```terraform
-
-module "github_actions_oidc_api" {
-  source = "Invicton-Labs/github-oidc/aws"
-
-  // Pass the IAM OIDC provider ARN in so this module
-  // doesn't attempt to create a duplicate (would fail)
-  iam_oidc_provider_arn             = module.github_actions_oidc_website.iam_oidc_provider_arn
-
-  repository_roles = [
-    // For all branches
-    {
-      role_name = "api-cicd"
-      repositories = [
-        "Invicton-Labs/api"
-      ]
-      branches = [
-        "*",
-      ]
-      tags = null
-      environments = null
-      pull_requests = false
-      iam_policy_arns = null
-      iam_policy_documents = [
-        {
-          policy_name     = "api"
-          policy_document = data.aws_iam_policy_document.api.json
-        }
-      ]
-      iam_inline_policy_documents = null
-      additional_role_trust_policy_documents = null
-    },
-  ]
-}
-```
+### GitHub Actions
 
 For your GitHub Actions workflow, you would then do something like this:
+
 ```
 name: AWS Credentials Example
 
