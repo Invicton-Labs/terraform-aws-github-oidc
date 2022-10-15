@@ -16,7 +16,8 @@ An AWS account can only have a single IAM OIDC provider with a given provider UR
 
 ```terraform
 module "github_actions_oidc_provider" {
-  source = "Invicton-Labs/github-oidc/aws/provider"
+  // NOTE: there's a double forward slash
+  source = "Invicton-Labs/github-oidc/aws//provider"
 }
 ```
 
