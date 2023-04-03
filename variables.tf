@@ -1,6 +1,8 @@
 variable "repository_roles" {
   description = <<EOF
-  A map of role names to repository permission configurations.
+  A list of repository permission configurations.
+
+  `role_name`: A unique name to use for an IAM role that will be assumed by the GitHub workflow.
 
   `repositories`: A list of repositories, in ORG/REPO format, that should be able to assume the role. At least one value MUST be provided, and the repository making the request MUST be in this list. NOTE: these strings use the same wildcard format as AWS IAM policies; `?` will be considered a single-character wildcard and  `*` will be considered a multi-characer wildcard.
 
@@ -21,6 +23,8 @@ variable "repository_roles" {
   `max_session_duration`: Maximum session duration (in seconds) that you want to set for the specified role. If you do not specify a value for this setting, the default maximum of one hour is applied. This setting can have a value from 1 hour to 12 hours.
 
   `additional_role_trust_policy_documents`: A list of additional JSON-encoded IAM trust policy documents to include in the trust policy for the role. This is useful if you want the role to be assumable by additional entities other than GitHub Actions.
+
+  `workflow_parameters`: A map of values that should be made available to the GitHub Actions workflow.
 EOF
   type = list(object({
     role_name       = string
@@ -40,6 +44,7 @@ EOF
     })), [])
     max_session_duration                   = optional(number)
     additional_role_trust_policy_documents = optional(list(string), [])
+    workflow_parameters                    = optional(any, {})
   }))
   default  = []
   nullable = false

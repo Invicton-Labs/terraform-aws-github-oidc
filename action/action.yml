@@ -1,0 +1,64 @@
+name: 'Terraform AWS GitHub'
+description: 'Assumes an AWS role using the GitHub token and loads parameters.'
+
+inputs:
+  region:
+    description: "The AWS region that the Terraform module was created in."
+    required: true
+  account_id:
+    description: "The ID of the AWS account to assume the role in."
+    required: true
+  role_name:
+    description: "The name of the role to assume."
+    required: true
+  session_duration:
+    description: "The number of seconds that the role assumption session will last."
+    required: false
+    default: 900
+
+outputs:
+  parameters:
+    description: "JSON-encoded parameters that were set in the Terraform config and are available to the workflow."
+    value: ${{ steps.params.outputs.PARAMS }}
+
+runs:
+  using: 'composite'
+
+  steps:
+
+    - name: Prepare Variables
+      id: repo
+      shell: sh
+      # Format is "gha-{{SHORT_HASH}}-{{REPO_OWNER}}-{{REPO_NAME}}"
+      # We always truncate to 64 chars, since that's the length limit for a session name
+      run: |
+        REPO="${{ github.repository }}"
+        session_name="gha-$(echo ${{github.sha}} | cut -c1-7)-${{ github.repository_owner }}-${REPO##*/}"
+        echo "SESSION_NAME=$(echo "$session_name" | cut -c1-64)" >> $GITHUB_OUTPUT
+
+    # Assume the role
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        role-to-assume: arn:aws:iam::${{ inputs.account_id }}:role/${{ inputs.role_name }}
+        role-session-name: ${{ steps.repo.outputs.SESSION_NAME}}
+        aws-region: ${{ inputs.region }}
+        # It's best practice to limit this to as little as is required to
+        # complete the steps in the job that require AWS credentials. This
+        # reduces the risk if the token somehow leaks.
+        role-duration-seconds: ${{ inputs.session_duration }}
+
+    - name: Load Parameters
+      id: params
+      shell: sh
+      run: |
+        params=$(aws ssm get-parameter \
+          --region ${{ inputs.region }} \
+          --no-paginate \
+          --no-cli-pager \
+          --no-cli-auto-prompt \
+          --color off \
+          --output json \
+          --name /github/${{ inputs.role_name }} \
+          --with-decryption | jq -r ".Parameter.Value")
+        echo "PARAMS=$params" >> $GITHUB_OUTPUT
