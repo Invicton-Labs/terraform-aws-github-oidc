@@ -54,6 +54,9 @@ module "github_actions_oidc_website" {
       iam_inline_policy_documents = null
       max_session_duration = null
       additional_role_trust_policy_documents = null
+      workflow_parameters = {
+        myfavouriteparameter = "hello world"
+      }
     },
 
     // For the prod branch
@@ -78,6 +81,9 @@ module "github_actions_oidc_website" {
       iam_inline_policy_documents = null
       max_session_duration = null
       additional_role_trust_policy_documents = null
+      workflow_parameters = {
+        myfavouriteparameter = "hello world"
+      }
     }
   ]
 }
@@ -110,16 +116,13 @@ jobs:
         uses: actions/checkout@v3
 
       # This must be done once in each job that needs AWS credentials
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+      - name: AWS Config
+        id: aws-config
+        uses: Invicton-Labs/terraform-aws-github-oidc/action@main
         with:
-          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/website-cicd-${{ github.ref_name }}
-          role-session-name: samplerolesession
-          aws-region: ${{ env.AWS_REGION }}
-          # It's best practice to limit this to as little as is required to
-          # complete the steps in the job that require AWS credentials. This
-          # reduces the risk if the token somehow leaks.
-          role-duration-seconds: 300
+          region: ${{ env.AWS_REGION }}
+          account_id: ${{ env.AWS_ACCOUNT_ID }}
+          role_name: website-cicd-${{ github.ref_name }}
 
       # All future steps IN THE SAME JOB will now use the assumed role,
       # unless different credentials are explicitly provided to that step.
@@ -127,4 +130,11 @@ jobs:
       # This will show that we have assumed the role specified above
       - name: Get the caller identity
         run: aws sts get-caller-identity
+
+      # Access one of the `workflow_parameter` values that were set in the Terraform config.
+      # This is excellent for passing parameters such as S3 bucket IDs, CloudFront Distribution IDs,
+      # and other values that may be necessary in the workflow, without having to set them as 
+      # GitHub secrets.
+      - name: Show Output Param
+        run: echo "${{fromJSON(steps.aws-config.outputs.parameters).myfavouriteparameter}}"
 ```
