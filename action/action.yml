@@ -2,9 +2,6 @@ name: 'Terraform AWS GitHub'
 description: 'Assumes an AWS role using the GitHub token and loads parameters.'
 
 inputs:
-  token:
-    description: "The `secrets.GITHUB_TOKEN` value."
-    required: true
   region:
     description: "The AWS region that the Terraform module was created in."
     required: true
@@ -29,7 +26,7 @@ runs:
 
   steps:
 
-    - name: Extract Repository Name
+    - name: Prepare Variables
       id: repo
       shell: sh
       # Format is "gha-{{SHORT_HASH}}-{{REPO_OWNER}}-{{REPO_NAME}}"
@@ -39,8 +36,7 @@ runs:
         session_name="gha-$(echo ${{github.sha}} | cut -c1-7)-${{ github.repository_owner }}-${REPO##*/}"
         echo "SESSION_NAME=$(echo "$session_name" | cut -c1-64)" >> $GITHUB_OUTPUT
 
-
-    # This must be done once in each job that needs AWS credentials
+    # Assume the role
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v2
       with:
@@ -51,8 +47,6 @@ runs:
         # complete the steps in the job that require AWS credentials. This
         # reduces the risk if the token somehow leaks.
         role-duration-seconds: ${{ inputs.session_duration }}
-      env:
-        GITHUB_TOKEN: ${{ inputs.token }}
 
     - name: Load Parameters
       id: params
