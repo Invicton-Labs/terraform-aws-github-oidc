@@ -26,12 +26,19 @@ runs:
 
   steps:
 
+    - name: Extract Repository Name
+      id: repo
+      shell: sh
+      run: |
+        REPO="${{ github.repository }}""
+        echo "REPO=${REPO##*/}" >> $GITHUB_OUTPUT
+
     # This must be done once in each job that needs AWS credentials
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v2
       with:
         role-to-assume: arn:aws:iam::${{ inputs.account_id }}:role/${{ inputs.role_name }}
-        role-session-name: github-${{ github.repository }}-${{ github.sha }}
+        role-session-name: github-${{ github.repository_owner }}-${{ steps.repo.outputs.REPO}}-${{ github.sha }}
         aws-region: ${{ inputs.region }}
         # It's best practice to limit this to as little as is required to
         # complete the steps in the job that require AWS credentials. This
