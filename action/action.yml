@@ -52,7 +52,7 @@ runs:
         # reduces the risk if the token somehow leaks.
         role-duration-seconds: ${{ inputs.session_duration }}
       env:
-        GITHUB_TOKEN: ${{ intputs.token }}
+        GITHUB_TOKEN: ${{ inputs.token }}
 
     - name: Load Parameters
       id: params
