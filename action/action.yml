@@ -2,10 +2,9 @@ name: 'Terraform AWS GitHub'
 description: 'Assumes an AWS role using the GitHub token and loads parameters.'
 
 inputs:
-  # token:
-  #   description: "The `secrets.GITHUB_TOKEN` value."
-  #   required: true
-
+  token:
+    description: "The `secrets.GITHUB_TOKEN` value."
+    required: true
   region:
     description: "The AWS region that the Terraform module was created in."
     required: true
@@ -53,7 +52,7 @@ runs:
         # reduces the risk if the token somehow leaks.
         role-duration-seconds: ${{ inputs.session_duration }}
       env:
-        GITHUB_TOKEN: ${{ secrets.github_token }}
+        GITHUB_TOKEN: ${{ intputs.token }}
 
     - name: Load Parameters
       id: params
