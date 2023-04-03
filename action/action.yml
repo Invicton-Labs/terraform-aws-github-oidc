@@ -19,7 +19,7 @@ inputs:
 outputs:
   parameters:
     description: "JSON-encoded parameters that were set in the Terraform config and are available to the workflow."
-    value: steps.params.outputs.PARAMS
+    value: ${{ steps.params.outputs.PARAMS }}
 
 runs:
   using: 'composite'
