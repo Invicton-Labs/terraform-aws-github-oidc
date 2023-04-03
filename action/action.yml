@@ -30,7 +30,7 @@ runs:
       id: repo
       shell: sh
       run: |
-        REPO="${{ github.repository }}""
+        REPO="${{ github.repository }}"
         echo "REPO=${REPO##*/}" >> $GITHUB_OUTPUT
 
     # This must be done once in each job that needs AWS credentials
